@@ -1,0 +1,26 @@
+
+!set host players <2-4>
+!set host color <player:0-3> <color:0-3>
+!set host watcher <player:0-3> <0|1>
+!set host randomize <0|1>
+!set host password <password|>
+!set host restrict <min|max> <rank:1-7>
+!set host mappack <packid:1-255>
+!set host level <mapid:0-15>
+!set host add huts <0|1>
+!set host add towers <0|1>
+!set host add warriorhut <0|1>
+!set host add spyhut <0|1>
+!set host add temple <0|1>
+!set host add firewarriorhut <0|1>
+!set host add wildmen <0|1>
+!set host add mana <0|1>
+!set host unranked <0|1>
+!set host timed <0|4-90>
+!set host victory <arma|pop|kills|shamans>
+   
+!joinhut (<hutind:1-10> <hutpos:0-4> | <listind:1-40> | <exit:0>)
+!launch
+!startgame
+!closegame
+!hutlist

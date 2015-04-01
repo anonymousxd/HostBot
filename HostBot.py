@@ -154,7 +154,7 @@ def check_hut():
 
 
 
-send("!away busy")
+send("!away HostBot")
 send("!hutlist")
 while True:
     data = s.recv(BUFFER_SIZE)

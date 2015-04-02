@@ -20,6 +20,7 @@ mode = M_IDLE
 master = ""
 in_game = False
 connections = 0
+STATUS = "HostBot"
 
 TCP_IP = '127.0.0.1'
 TCP_PORT = 7501
@@ -60,14 +61,14 @@ def process_pm(sender, message):
     if master == "" and message == "hostme":
         mode = M_HOSTING_PLAYER
         join_player_hut(sender)
-        
-    elif sender == master:
-        if message.startswith("players "):
-            players = int(message[-1])
-            if players < 2: players = 2
-            if players > 4: players = 4
-            send('!set host players '+str(players))
-            check_hut()
+##        
+##    elif sender == master:
+##        if message.startswith("players "):
+##            players = int(message[-1])
+##            if players < 2: players = 2
+##            if players > 4: players = 4
+##            send('!set host players '+str(players))
+##            check_hut()
 
         
 def process_notify(message):
@@ -89,6 +90,7 @@ def process_notify(message):
             if connections == 0:
                 send('!closegame')
                 master = ""
+                send("!away "+STATUS)
     
 def process_msg(sender, message):
     if message.startswith("$hut "):
@@ -127,6 +129,7 @@ def join_player_hut(nick):
         return
         
     # joining user's hut as host
+    print "Hosting "+nick
     send('!joinhut '+str(hut)+' 0')
     send('!set host watcher 0 1')
     send('!set host mappack 42')
@@ -145,19 +148,21 @@ def check_hut():
         if hutlist[i] != "*" : 
             players_in_hut += 1
     if players_in_hut == players:
+        print "Launching:"
+        for i in range((myhut-1)*4+1, myhut*4):
+            print " - "+ hutlist[i] 
         send('!launch')
         myhut = 0
         mode = M_GAME_SETUP
 
 
 
-send("!away HostBot")
+send("!away "+STATUS)
 send("!hutlist")
 while True:
     data = s.recv(BUFFER_SIZE)
     for line in data.split("\n"):
         if line:
-            print line
             receive_message(int(line[0]), line[1:].strip())
 
 s.close()

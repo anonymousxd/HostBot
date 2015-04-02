@@ -24,3 +24,5 @@
 !startgame
 !closegame
 !hutlist
+!playerlist
+!popchat <msg>

@@ -10,6 +10,7 @@ MSG_NOTIFY = 0
 MSG_NORMAL = 1
 MSG_PM     = 2
 MSG_ERROR  = 3
+MSG_POP    = 4
 
 hutlist = ["" for i in range(4*10)]
 receiving_huts = False
@@ -40,8 +41,6 @@ def receive_message(t, message):
             process_pm(sender, message)
         elif t == MSG_NOTIFY:
             process_notify(message)
-        elif t == MSG_ERROR:
-            process_error(message)
         elif t == MSG_NORMAL:
             sender, message = message.split("> ", 1)
             process_msg(sender, message)
@@ -72,7 +71,7 @@ def process_pm(sender, message):
 
         
 def process_notify(message):
-    global connections
+    global connections, master
     if message.startswith("$hut "):
         cmd, hut, pos, data = message.split()
         hutlist[ (int(hut)-1)*4 + int(pos) ] = data
@@ -89,9 +88,7 @@ def process_notify(message):
             connections -= 1
             if connections == 0:
                 send('!closegame')
-    
-def process_error(message):
-    pass
+                master = ""
     
 def process_msg(sender, message):
     if message.startswith("$hut "):
@@ -132,8 +129,8 @@ def join_player_hut(nick):
     # joining user's hut as host
     send('!joinhut '+str(hut)+' 0')
     send('!set host watcher 0 1')
-    send('!set host mappack 1')
-    send('!set host level 14')
+    send('!set host mappack 42')
+    send('!set host level 10')
     send('!set host players 3')
     players = 3
     myhut = hut

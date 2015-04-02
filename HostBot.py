@@ -95,7 +95,9 @@ def process_notify(message):
                 if in_game:
                     send('!closegame')
                 master = ""
-                send("!join hut 0")
+                in_game = False
+                mode = M_IDLE
+                send("!joinhut 0")
                 send("!away "+STATUS)
     
 def process_msg(sender, message):
@@ -109,8 +111,35 @@ def process_msg(sender, message):
                 if hutlist[i] == sender:
                     hutlist[i] = "*"
                     break
-        check_hut()
+        if myhut == 0:
+            check_hut()
+            if mode == M_IDLE:
+		        join_empty_hut()
     
+def set_host_params(hut):
+    global players, mode, myhut
+    send('!joinhut '+str(hut)+' 0')
+    send('!set host watcher 0 1')
+    send('!set host mappack 42')
+    send('!set host level 10')
+    send('!set host players 3')
+    players = 3
+    myhut = hut
+    mode = M_HOSTING_GAME
+	
+def join_empty_hut():
+    global players, mode, master, myhut
+    hut = 1
+    pos = 0
+    for i in range(0, len(hutlist) / 4):
+        j = i * 4
+        if hutlist[j+0] == "*" and hutlist[j+1] == "*" and hutlist[j+2] == "*" and hutlist[j+3] == "*":
+            break
+        hut += 1
+	
+    hostspot = hutlist[(hut-1)*4]
+    set_host_params(hut)
+	
 # find the hut a player is in and join it as host
 def join_player_hut(nick):
     global players, mode, master, myhut
@@ -136,15 +165,8 @@ def join_player_hut(nick):
         
     # joining user's hut as host
     print "Hosting "+nick
-    send('!joinhut '+str(hut)+' 0')
-    send('!set host watcher 0 1')
-    send('!set host mappack 42')
-    send('!set host level 10')
-    send('!set host players 3')
-    players = 3
-    myhut = hut
+    set_host_params(hut)
     master = nick
-    mode = M_HOSTING_GAME
 
 def check_hut():
     global myhut
@@ -173,8 +195,3 @@ while True:
             receive_message(int(line[0]), line[1:].strip())
 
 s.close()
-
-
-
-
-    

@@ -21,6 +21,7 @@ mode = M_IDLE
 master = ""
 in_game = False
 connections = 0
+connected = 0
 STATUS = "HostBot"
 
 TCP_IP = '127.0.0.1'
@@ -38,19 +39,16 @@ def send(msg):
 def receive_message(t, message):  
     if in_game:
         return
-    try:
-        if t == MSG_PM:
-            sender, message = message.split("> ", 1)
-            process_pm(sender, message)
-        elif t == MSG_NOTIFY:
-            process_notify(message)
-        elif t == MSG_NORMAL:
-            sender, message = message.split("> ", 1)
-            process_msg(sender, message)
-        else:
-            # invalid message format
-            pass
-    except:
+    if t == MSG_PM:
+        sender, message = message.split("> ", 1)
+        process_pm(sender, message)
+    elif t == MSG_NOTIFY:
+        process_notify(message)
+    elif t == MSG_NORMAL:
+        sender, message = message.split("> ", 1)
+        process_msg(sender, message)
+    else:
+        # invalid message format
         pass
         
 def process_pm(sender, message):
@@ -74,7 +72,7 @@ def process_pm(sender, message):
 
         
 def process_notify(message):
-    global connections, master
+    global connections, connected, master, in_game
     if message.startswith("$hut "):
         cmd, hut, pos, data = message.split()
         hutlist[ (int(hut)-1)*4 + int(pos) ] = data
@@ -82,23 +80,31 @@ def process_notify(message):
         
     elif message.startswith("$pop "):
         message = message[5:]
+        print message
         if message == "all ready":
             send('!startgame')
 
         elif message.startswith("connect"):
             connections += 1
             print message, connections
+
+        elif message.startswith("connected"):
+            connected += 1
+            print message, connections
+            check_hut()
+            
         elif message.startswith("disconnect"):
             connections -= 1
             print message, connections
             if connections == 0:
                 if in_game:
                     send('!closegame')
-                master = ""
-                in_game = False
-                mode = M_IDLE
-                send("!joinhut 0")
-                send("!away "+STATUS)
+                    master = ""
+                    in_game = False
+                    myhut = 0
+                    mode = M_IDLE
+                    send("!joinhut 0")
+                    send("!away "+STATUS)
     
 def process_msg(sender, message):
     if message.startswith("$hut "):
@@ -111,10 +117,10 @@ def process_msg(sender, message):
                 if hutlist[i] == sender:
                     hutlist[i] = "*"
                     break
-        if myhut == 0:
+        if myhut != 0:
             check_hut()
-            if mode == M_IDLE:
-		        join_empty_hut()
+        if mode == M_IDLE:
+	    join_empty_hut()
     
 def set_host_params(hut):
     global players, mode, myhut
@@ -169,13 +175,13 @@ def join_player_hut(nick):
     master = nick
 
 def check_hut():
-    global myhut
+    global myhut, in_game
     if myhut == 0: return
     players_in_hut = 0
     for i in range((myhut-1)*4, myhut*4):
         if hutlist[i] != "*" : 
             players_in_hut += 1
-    if players_in_hut == players:
+    if players_in_hut == players: # and connected == players:
         print "Launching:"
         for i in range((myhut-1)*4+1, myhut*4):
             print " - "+ hutlist[i] 
@@ -192,6 +198,9 @@ while True:
     data = s.recv(BUFFER_SIZE)
     for line in data.split("\n"):
         if line:
-            receive_message(int(line[0]), line[1:].strip())
+            try:
+                receive_message(int(line[0]), line[1:].strip())
+            except:
+                pass
 
 s.close()

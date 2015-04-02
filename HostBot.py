@@ -1,5 +1,6 @@
 import socket
 import sys
+from time import sleep
 
 M_IDLE = 0
 M_HOSTING_PLAYER = 1
@@ -32,6 +33,7 @@ s.connect((TCP_IP, TCP_PORT))
 def send(msg):
     print ">",msg
     s.send(msg+"\n")
+    sleep(0.1)
 
 def receive_message(t, message):  
     if in_game:
@@ -85,11 +87,15 @@ def process_notify(message):
 
         elif message.startswith("connect"):
             connections += 1
+            print message, connections
         elif message.startswith("disconnect"):
             connections -= 1
+            print message, connections
             if connections == 0:
-                send('!closegame')
+                if in_game:
+                    send('!closegame')
                 master = ""
+                send("!join hut 0")
                 send("!away "+STATUS)
     
 def process_msg(sender, message):
@@ -153,6 +159,7 @@ def check_hut():
             print " - "+ hutlist[i] 
         send('!launch')
         myhut = 0
+        in_game = True
         mode = M_GAME_SETUP
 
 

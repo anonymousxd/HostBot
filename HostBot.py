@@ -37,8 +37,6 @@ def send(msg):
     sleep(0.1)
 
 def receive_message(t, message):  
-    if in_game:
-        return
     if t == MSG_PM:
         sender, message = message.split("> ", 1)
         process_pm(sender, message)
@@ -54,6 +52,8 @@ def receive_message(t, message):
 def process_pm(sender, message):
     global mode, master, players
     print sender, message
+    if in_game:
+        return
 
     if sender == "IncaWarrior" and message == "quit":
         sys.exit(0)
@@ -73,7 +73,7 @@ def process_pm(sender, message):
         
 def process_notify(message):
     global connections, connected, master, in_game
-    if message.startswith("$hut "):
+    if not in_game and message.startswith("$hut "):
         cmd, hut, pos, data = message.split()
         hutlist[ (int(hut)-1)*4 + int(pos) ] = data
         check_hut()
@@ -184,7 +184,8 @@ def check_hut():
     if players_in_hut == players: # and connected == players:
         print "Launching:"
         for i in range((myhut-1)*4+1, myhut*4):
-            print " - "+ hutlist[i] 
+            print " - "+ hutlist[i]
+        sleep(5)
         send('!launch')
         myhut = 0
         in_game = True

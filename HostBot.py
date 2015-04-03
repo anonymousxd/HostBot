@@ -99,7 +99,7 @@ def process_notify(message):
             check_hut()
             
         elif message.startswith("disconnect"):
-            connections -= 1
+            connections = max(connections-1, 0)
             print message, connections
             if connections == 0:
                 if in_game:

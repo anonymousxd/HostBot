@@ -183,10 +183,19 @@ def check_hut():
     global myhut, in_game
     if myhut == 0: return
     players_in_hut = 0
+    in_hut = False
     for i in range((myhut-1)*4, myhut*4):
         if hutlist[i] != "*" : 
             players_in_hut += 1
-    if players_in_hut == players: # and connected == players:
+        elif hutlist[i] == MYNAME:
+            in_hut = True
+
+    # not in hut as expected
+    if not inhut:
+        my_hut = 0
+        mode = M_IDLE
+        
+    elif players_in_hut == players: # and connected == players:
         print "Launching:"
         for i in range((myhut-1)*4+1, myhut*4):
             print " - "+ hutlist[i]

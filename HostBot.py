@@ -84,6 +84,11 @@ def process_notify(message):
         if message == "all ready":
             send('!startgame')
 
+        elif message == "started":
+            myhut = 0
+            in_game = True
+            mode = M_GAME_SETUP
+
         elif message.startswith("connect"):
             connections += 1
             print message, connections
@@ -187,9 +192,6 @@ def check_hut():
             print " - "+ hutlist[i]
         sleep(5)
         send('!launch')
-        myhut = 0
-        in_game = True
-        mode = M_GAME_SETUP
 
 
 

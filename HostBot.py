@@ -2,10 +2,14 @@ import socket
 import sys
 from time import sleep
 
+MYNAME = "IncaSpy"
+
+MAX_HUTS = 10
 M_IDLE = 0
 M_HOSTING_PLAYER = 1
 M_HOSTING_GAME = 2
-M_GAME_SETUP = 3
+M_LAUNCHING = 3
+M_GAME_SETUP =4
 
 MSG_NOTIFY = 0
 MSG_NORMAL = 1
@@ -13,7 +17,7 @@ MSG_PM     = 2
 MSG_ERROR  = 3
 MSG_POP    = 4
 
-hutlist = ["" for i in range(4*10)]
+hutlist = ["X" for i in range(4*MAX_HUTS)]
 receiving_huts = False
 players = 4
 myhut = 0
@@ -37,16 +41,17 @@ def send(msg):
     sleep(0.1)
 
 def receive_message(t, message):  
-    if t == MSG_PM:
+    if t == MSG_PM and "> " in message:
         sender, message = message.split("> ", 1)
         process_pm(sender, message)
     elif t == MSG_NOTIFY:
         process_notify(message)
-    elif t == MSG_NORMAL:
+    elif t == MSG_NORMAL and "> " in message:
         sender, message = message.split("> ", 1)
         process_msg(sender, message)
     else:
         # invalid message format
+        print "^",t,message
         pass
         
 def process_pm(sender, message):
@@ -72,82 +77,103 @@ def process_pm(sender, message):
 
         
 def process_notify(message):
-    global connections, connected, master, in_game
+    global connections, connected, master, in_game, myhut, mode
     if not in_game and message.startswith("$hut "):
-        cmd, hut, pos, data = message.split()
+        data = message.split()
+        if len(data) < 4: return
+        cmd, hut, pos, data = data
         hutlist[ (int(hut)-1)*4 + int(pos) ] = data
         check_hut()
         
+    elif message.startswith("Launching "):
+        mode = M_LAUNCHING
+        print "really launching"
+        
     elif message.startswith("$pop "):
         message = message[5:]
-        print message
         if message == "all ready":
             send('!startgame')
 
         elif message == "started":
-            myhut = 0
             in_game = True
             mode = M_GAME_SETUP
-
-        elif message.startswith("connect"):
-            connections += 1
-            print message, connections
+            print message
 
         elif message.startswith("connected"):
             connected += 1
             print message, connections
             check_hut()
+
+        elif message.startswith("connect"):
+            connections += 1
+            print message, connections
             
         elif message.startswith("disconnect"):
             connections = max(connections-1, 0)
             print message, connections
             if connections == 0:
-                if in_game:
-                    send('!closegame')
-                    master = ""
-                    in_game = False
-                    myhut = 0
-                    mode = M_IDLE
-                    send("!joinhut 0")
-                    send("!away "+STATUS)
+                if in_game: reset()
     
 def process_msg(sender, message):
+    global myhut
+    
     if message.startswith("$hut "):
-        cmd, hut, pos = message.split()
+        data = message.split()
+        if len(data) < 3: return
+        cmd, hut, pos = data
+        # removed user from hut
+        for i in range(len(hutlist)):
+            if hutlist[i] == sender:
+                hutlist[i] = "*"
+                break
+            
         if int(hut) > 0:
             hutlist[ (int(hut)-1)*4 + int(pos) ] = sender
-        else:
-            # removed user from hut
-            for i in range(len(hutlist)):
-                if hutlist[i] == sender:
-                    hutlist[i] = "*"
-                    break
+
+        if sender == MYNAME:
+            myhut = int(hut)
+            
         if myhut != 0:
             check_hut()
         if mode == M_IDLE:
-	    join_empty_hut()
+            join_empty_hut()
+
+def reset():
+    global myhut, mode, in_game, master
+    master = ""
+    if in_game: send('!closegame')
+    if myhut > 0: send("!joinhut 0")
+    in_game = False
+    myhut = 0
+    mode = M_IDLE
+    send("!away "+STATUS)
     
 def set_host_params(hut):
     global players, mode, myhut
     send('!joinhut '+str(hut)+' 0')
+    send("!away "+STATUS)
     send('!set host watcher 0 1')
     send('!set host mappack 42')
     send('!set host level 10')
     send('!set host players 3')
     players = 3
     myhut = hut
+    hutlist[(hut-1)*4] = MYNAME
     mode = M_HOSTING_GAME
 	
 def join_empty_hut():
     global players, mode, master, myhut
     hut = 1
     pos = 0
-    for i in range(0, len(hutlist) / 4):
+    for i in range(0, MAX_HUTS):
         j = i * 4
         if hutlist[j+0] == "*" and hutlist[j+1] == "*" and hutlist[j+2] == "*" and hutlist[j+3] == "*":
             break
         hut += 1
-	
+    else:
+        # no huts found
+        return
+
     hostspot = hutlist[(hut-1)*4]
     set_host_params(hut)
 	
@@ -180,39 +206,41 @@ def join_player_hut(nick):
     master = nick
 
 def check_hut():
-    global myhut, in_game
+    global myhut, in_game, mode
     if myhut == 0: return
     players_in_hut = 0
     in_hut = False
     for i in range((myhut-1)*4, myhut*4):
         if hutlist[i] != "*" : 
             players_in_hut += 1
-        elif hutlist[i] == MYNAME:
+        if hutlist[i] == MYNAME:
             in_hut = True
 
     # not in hut as expected
-    if not inhut:
-        my_hut = 0
-        mode = M_IDLE
+    if not in_hut:
+        print "not in hut anymore"
+        reset()
         
-    elif players_in_hut == players: # and connected == players:
+    elif players_in_hut == players and mode != M_LAUNCHING and mode != M_GAME_SETUP:
         print "Launching:"
         for i in range((myhut-1)*4+1, myhut*4):
             print " - "+ hutlist[i]
-        sleep(5)
         send('!launch')
 
-
+    else:
+        #print players_in_hut, players
+        pass
 
 send("!away "+STATUS)
 send("!hutlist")
 while True:
     data = s.recv(BUFFER_SIZE)
     for line in data.split("\n"):
-        if line:
-            try:
+        if line and line[0].isdigit():
+            #    print line
+            #try:
                 receive_message(int(line[0]), line[1:].strip())
-            except:
-                pass
+            #except:
+            #    pass
 
 s.close()

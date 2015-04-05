@@ -1,10 +1,16 @@
 import socket
 import sys
 from time import sleep
+import ctypes
+from random import randrange
+from time import time
+SetCursorPos = ctypes.windll.user32.SetCursorPos
 
 MYNAME = "IncaSpy"
 
 MAX_HUTS = 10
+JOIN_DELAY = 10
+
 M_IDLE = 0
 M_HOSTING_PLAYER = 1
 M_HOSTING_GAME = 2
@@ -26,6 +32,7 @@ master = ""
 in_game = False
 connections = 0
 connected = 0
+join_time = 0
 STATUS = "HostBot"
 
 TCP_IP = '127.0.0.1'
@@ -40,7 +47,8 @@ def send(msg):
     s.send(msg+"\n")
     sleep(0.1)
 
-def receive_message(t, message):  
+def receive_message(t, message):
+    global join_time
     if t == MSG_PM and "> " in message:
         sender, message = message.split("> ", 1)
         process_pm(sender, message)
@@ -53,6 +61,10 @@ def receive_message(t, message):
         # invalid message format
         print "^",t,message
         pass
+
+    if mode == M_IDLE and join_time + JOIN_DELAY < time():
+        join_empty_hut()
+        join_time = time()
         
 def process_pm(sender, message):
     global mode, master, players
@@ -63,8 +75,7 @@ def process_pm(sender, message):
     if sender == "IncaWarrior" and message == "quit":
         sys.exit(0)
     
-    if master == "" and message == "hostme":
-        mode = M_HOSTING_PLAYER
+    if master == "" and (message == "hostme" or message == "join"):
         join_player_hut(sender)
 ##        
 ##    elif sender == master:
@@ -131,12 +142,18 @@ def process_msg(sender, message):
             hutlist[ (int(hut)-1)*4 + int(pos) ] = sender
 
         if sender == MYNAME:
-            myhut = int(hut)
+            if int(hut) != myhut:
+                myhut = int(hut)
+                print "Moved to hut:",myhut
+            if myhut == 0 and mode == M_HOSTING_GAME:
+                print "Moved out of hut"
+                SetCursorPos(randrange(100),randrange(100))
+                reset()
+            elif myhut > 0 and mode == M_IDLE:
+                set_host_params()
             
         if myhut != 0:
             check_hut()
-        if mode == M_IDLE:
-            join_empty_hut()
 
 def reset():
     global myhut, mode, in_game, master
@@ -146,19 +163,16 @@ def reset():
     in_game = False
     myhut = 0
     mode = M_IDLE
-    send("!away "+STATUS)
     
-def set_host_params(hut):
-    global players, mode, myhut
-    send('!joinhut '+str(hut)+' 0')
+def set_host_params():
+    global players, mode
+    print "Hosting in hut",myhut
     send("!away "+STATUS)
     send('!set host watcher 0 1')
     send('!set host mappack 42')
     send('!set host level 10')
     send('!set host players 3')
     players = 3
-    myhut = hut
-    hutlist[(hut-1)*4] = MYNAME
     mode = M_HOSTING_GAME
 	
 def join_empty_hut():
@@ -174,14 +188,14 @@ def join_empty_hut():
         # no huts found
         return
 
-    hostspot = hutlist[(hut-1)*4]
-    set_host_params(hut)
+    send('!joinhut '+str(hut)+' 0')
 	
 # find the hut a player is in and join it as host
 def join_player_hut(nick):
     global players, mode, master, myhut
     hut = 1
     pos = 0
+    mode = M_IDLE
     for spot in hutlist:
         if spot == nick:
             break
@@ -190,19 +204,17 @@ def join_player_hut(nick):
     else:
         # could not find user in hut
         send('!pvt: '+nick+'> You need to be in a hut')
-        mode = M_IDLE
         return
         
     hostspot = hutlist[(hut-1)*4]
     if pos == 0 or hostspot != "*":
         # user in host spot or host spot taken
         send('!pvt: '+nick+'> There is already a host in your hut')
-        mode = M_IDLE
         return
         
     # joining user's hut as host
     print "Hosting "+nick
-    set_host_params(hut)
+    send('!joinhut '+str(hut)+' 0')
     master = nick
 
 def check_hut():
@@ -211,7 +223,7 @@ def check_hut():
     players_in_hut = 0
     in_hut = False
     for i in range((myhut-1)*4, myhut*4):
-        if hutlist[i] != "*" : 
+        if hutlist[i] != "*" and hutlist[i] != "X": 
             players_in_hut += 1
         if hutlist[i] == MYNAME:
             in_hut = True
@@ -226,6 +238,7 @@ def check_hut():
         for i in range((myhut-1)*4+1, myhut*4):
             print " - "+ hutlist[i]
         send('!launch')
+        SetCursorPos(randrange(100),randrange(100))
 
     else:
         #print players_in_hut, players
@@ -237,10 +250,13 @@ while True:
     data = s.recv(BUFFER_SIZE)
     for line in data.split("\n"):
         if line and line[0].isdigit():
-            #    print line
-            #try:
+            #print line
+            try:
                 receive_message(int(line[0]), line[1:].strip())
-            #except:
-            #    pass
+            except Exception as e:
+                print line
+                raise e
+                pass
+            SetCursorPos(randrange(100),randrange(100))
 
 s.close()

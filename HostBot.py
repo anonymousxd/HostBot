@@ -4,7 +4,6 @@ from time import sleep
 import ctypes
 from random import randrange
 from time import time
-SetCursorPos = ctypes.windll.user32.SetCursorPos
 
 MYNAME = "IncaSpy"
 
@@ -74,6 +73,8 @@ def process_pm(sender, message):
 
     if sender == "IncaWarrior" and message == "quit":
         sys.exit(0)
+    if sender == "IncaWarrior" and message == "reset":
+        reset()
     
     if master == "" and (message == "hostme" or message == "join"):
         join_player_hut(sender)
@@ -238,7 +239,7 @@ def check_hut():
         for i in range((myhut-1)*4+1, myhut*4):
             print " - "+ hutlist[i]
         send('!launch')
-        SetCursorPos(randrange(100),randrange(100))
+
 
     else:
         #print players_in_hut, players
@@ -257,6 +258,6 @@ while True:
                 print line
                 raise e
                 pass
-            SetCursorPos(randrange(100),randrange(100))
+
 
 s.close()

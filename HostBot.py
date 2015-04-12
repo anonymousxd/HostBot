@@ -148,7 +148,6 @@ def process_msg(sender, message):
                 print "Moved to hut:",myhut
             if myhut == 0 and mode == M_HOSTING_GAME:
                 print "Moved out of hut"
-                SetCursorPos(randrange(100),randrange(100))
                 reset()
             elif myhut > 0 and mode == M_IDLE:
                 set_host_params()
